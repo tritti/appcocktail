@@ -1,0 +1,24 @@
+# Ignora file di sistema macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Ignora file di sistema Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Ignora cartelle di ambiente di sviluppo
+.idea/
+.vscode/
+*.sublime-*
+
+# Ignora file temporanei
+*.swp
+*.swo
+*~
+
+# Ignora log
+*.log
+logs/
