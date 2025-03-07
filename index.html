@@ -14,6 +14,7 @@
                 <button id="showRecipes">Visualizza Cocktail</button>
                 <button id="addRecipe">Aggiungi Ricetta</button>
                 <button id="configureWLED">Configura WLED</button>
+                <button id="showBackupRestore">Backup/Ripristino</button>
             </nav>
         </header>
 
@@ -50,6 +51,14 @@
                         <small>Numeri più bassi vengono mostrati prima</small>
                     </div>
                     
+                    <div class="form-group">
+                        <label for="alcoholic">Contiene alcol:</label>
+                        <select id="alcoholic" required>
+                            <option value="true">Sì</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    
                     <button type="submit">Salva Ricetta</button>
                 </form>
             </section>
@@ -57,6 +66,11 @@
             <!-- Sezione per visualizzare le ricette -->
             <section id="recipesSection">
                 <h2>I Miei Cocktail</h2>
+                <div class="filter-buttons">
+                    <button id="showAllCocktails" class="filter-btn active">Tutti</button>
+                    <button id="showAlcoholicCocktails" class="filter-btn">Alcolici</button>
+                    <button id="showNonAlcoholicCocktails" class="filter-btn">Analcolici</button>
+                </div>
                 <div id="cocktailButtons" class="cocktail-grid"></div>
             </section>
 
@@ -83,6 +97,7 @@
                         <h3>LED attivi:</h3>
                         <p id="detailLedPositions"></p>
                         <p>Ordine di visualizzazione: <span id="detailOrder"></span></p>
+                        <p>Contiene alcol: <span id="detailAlcoholic"></span></p>
                     </div>
                 </div>
             </section>
@@ -120,6 +135,14 @@
                         <small>Numeri più bassi vengono mostrati prima</small>
                     </div>
                     
+                    <div class="form-group">
+                        <label for="editAlcoholic">Contiene alcol:</label>
+                        <select id="editAlcoholic" required>
+                            <option value="true">Sì</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    
                     <div class="form-actions">
                         <button type="submit">Salva Modifiche</button>
                         <button type="button" id="cancelEdit">Annulla</button>
@@ -146,6 +169,38 @@
                     </p>
                     <button type="submit">Salva Configurazione</button>
                 </form>
+            </section>
+
+            <!-- Backup e Ripristino -->
+            <section id="backupRestoreSection" class="hidden">
+                <h2>Backup e Ripristino Ricette</h2>
+                
+                <div class="backup-container">
+                    <h3>Esporta Ricette</h3>
+                    <p>Salva le tue ricette in un file per poterle importare su un altro dispositivo o avere un backup.</p>
+                    <button id="exportRecipesBtn" class="backup-btn">Esporta Ricette (JSON)</button>
+                </div>
+                
+                <div class="restore-container">
+                    <h3>Importa Ricette</h3>
+                    <p>Importa ricette da un file JSON precedentemente esportato.</p>
+                    <div class="form-group">
+                        <label for="importFile">Seleziona file JSON:</label>
+                        <input type="file" id="importFile" accept=".json">
+                    </div>
+                    <div class="import-options">
+                        <h4>Opzioni di importazione:</h4>
+                        <div class="radio-group">
+                            <input type="radio" id="importReplace" name="importOption" value="replace" checked>
+                            <label for="importReplace">Sostituisci tutte le ricette</label>
+                        </div>
+                        <div class="radio-group">
+                            <input type="radio" id="importMerge" name="importOption" value="merge">
+                            <label for="importMerge">Unisci con le ricette esistenti</label>
+                        </div>
+                    </div>
+                    <button id="importRecipesBtn" class="backup-btn">Importa Ricette</button>
+                </div>
             </section>
         </main>
     </div>

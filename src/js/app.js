@@ -3,11 +3,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const addRecipeButton = document.getElementById('addRecipe');
     const showRecipesButton = document.getElementById('showRecipes');
     const configureWLEDButton = document.getElementById('configureWLED');
+    const showBackupRestoreButton = document.getElementById('showBackupRestore');
     const addRecipeSection = document.getElementById('addRecipeSection');
     const recipesSection = document.getElementById('recipesSection');
     const recipeDetailSection = document.getElementById('recipeDetailSection');
     const editRecipeSection = document.getElementById('editRecipeSection');
     const wledConfigSection = document.getElementById('wledConfigSection');
+    const backupRestoreSection = document.getElementById('backupRestoreSection');
     const recipeForm = document.getElementById('recipeForm');
     const editRecipeForm = document.getElementById('editRecipeForm');
     const wledConfigForm = document.getElementById('wledConfigForm');
@@ -16,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const editRecipeButton = document.getElementById('editRecipe');
     const deleteRecipeButton = document.getElementById('deleteRecipe');
     const cancelEditButton = document.getElementById('cancelEdit');
+    const exportRecipesBtn = document.getElementById('exportRecipesBtn');
+    const importRecipesBtn = document.getElementById('importRecipesBtn');
+    const importFileInput = document.getElementById('importFile');
 
     // Variabili globali
     let currentRecipe = null;
@@ -28,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addRecipeButton.addEventListener('click', () => showSection(addRecipeSection));
     showRecipesButton.addEventListener('click', () => showSection(recipesSection));
     configureWLEDButton.addEventListener('click', () => showSection(wledConfigSection));
+    showBackupRestoreButton.addEventListener('click', () => showSection(backupRestoreSection));
     backToListButton.addEventListener('click', () => showSection(recipesSection));
     editRecipeButton.addEventListener('click', () => {
         if (currentRecipe) {
@@ -49,15 +55,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // Filtro per cocktail
+    document.getElementById('showAllCocktails').addEventListener('click', () => {
+        setActiveFilter('showAllCocktails');
+        loadCocktails('all');
+    });
+    
+    document.getElementById('showAlcoholicCocktails').addEventListener('click', () => {
+        setActiveFilter('showAlcoholicCocktails');
+        loadCocktails('alcoholic');
+    });
+    
+    document.getElementById('showNonAlcoholicCocktails').addEventListener('click', () => {
+        setActiveFilter('showNonAlcoholicCocktails');
+        loadCocktails('non-alcoholic');
+    });
+    
     recipeForm.addEventListener('submit', saveRecipe);
     editRecipeForm.addEventListener('submit', updateRecipe);
     wledConfigForm.addEventListener('submit', saveWLEDConfig);
+    
+    // Event Listeners per il backup/ripristino
+    exportRecipesBtn.addEventListener('click', exportRecipes);
+    importRecipesBtn.addEventListener('click', importRecipes);
+    
+    // Helper per impostare il filtro attivo
+    function setActiveFilter(filterId) {
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        document.getElementById(filterId).classList.add('active');
+    }
 
     /**
      * Mostra una sezione e nasconde le altre
      */
     function showSection(sectionToShow) {
-        const sections = [addRecipeSection, recipesSection, recipeDetailSection, editRecipeSection, wledConfigSection];
+        const sections = [
+            addRecipeSection, 
+            recipesSection, 
+            recipeDetailSection, 
+            editRecipeSection, 
+            wledConfigSection,
+            backupRestoreSection
+        ];
         sections.forEach(section => {
             section.classList.add('hidden');
         });
@@ -75,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const preparation = document.getElementById('preparation').value;
         const ledPositions = document.getElementById('ledPositions').value;
         const displayOrder = parseInt(document.getElementById('displayOrder').value) || 999;
+        const isAlcoholic = document.getElementById('alcoholic').value === 'true';
         
         // Validazione
         if (!cocktailName || !ingredients || !preparation || !ledPositions) {
@@ -93,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             preparation: preparation,
             ledPositions: ledPositionsArray,
             displayOrder: displayOrder,
+            alcoholic: isAlcoholic,
             createdAt: new Date().toISOString()
         };
         
@@ -117,6 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editPreparation').value = recipe.preparation;
         document.getElementById('editLedPositions').value = recipe.ledPositions.join(',');
         document.getElementById('editDisplayOrder').value = recipe.displayOrder || 999;
+        
+        // Imposta il valore del campo alcoholic se presente, altrimenti default a true
+        if (recipe.hasOwnProperty('alcoholic')) {
+            document.getElementById('editAlcoholic').value = recipe.alcoholic ? 'true' : 'false';
+        } else {
+            document.getElementById('editAlcoholic').value = 'true';
+        }
     }
 
     /**
@@ -131,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const preparation = document.getElementById('editPreparation').value;
         const ledPositions = document.getElementById('editLedPositions').value;
         const displayOrder = parseInt(document.getElementById('editDisplayOrder').value) || 999;
+        const isAlcoholic = document.getElementById('editAlcoholic').value === 'true';
         
         // Validazione
         if (!recipeId || !cocktailName || !ingredients || !preparation || !ledPositions) {
@@ -157,6 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
             preparation: preparation,
             ledPositions: ledPositions.split(',').map(pos => parseInt(pos.trim())),
             displayOrder: displayOrder,
+            alcoholic: isAlcoholic,
             updatedAt: new Date().toISOString()
         };
         
@@ -188,8 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Carica e visualizza i cocktail salvati
+     * @param {string} filter - Filtra per: 'all', 'alcoholic', 'non-alcoholic'
      */
-    function loadCocktails() {
+    function loadCocktails(filter = 'all') {
         const recipes = JSON.parse(localStorage.getItem('cocktailRecipes') || '[]');
         cocktailButtonsContainer.innerHTML = '';
         
@@ -198,14 +250,31 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // Filtra le ricette se necessario
+        let filteredRecipes = [...recipes];
+        
+        if (filter === 'alcoholic') {
+            filteredRecipes = recipes.filter(recipe => recipe.alcoholic !== false); // Include anche quelle senza proprietà alcoholic
+        } else if (filter === 'non-alcoholic') {
+            filteredRecipes = recipes.filter(recipe => recipe.alcoholic === false);
+        }
+        
+        // Mostra messaggio se non ci sono ricette nel filtro
+        if (filteredRecipes.length === 0) {
+            cocktailButtonsContainer.innerHTML = '<p>Nessuna ricetta corrisponde al filtro selezionato.</p>';
+            return;
+        }
+        
         // Ordina le ricette per nome in ordine alfabetico
-        const sortedRecipes = [...recipes].sort((a, b) => 
+        const sortedRecipes = filteredRecipes.sort((a, b) => 
             a.name.localeCompare(b.name, 'it', {sensitivity: 'base'})
         );
         
         sortedRecipes.forEach(recipe => {
             const button = document.createElement('button');
-            button.className = 'cocktail-button';
+            // Determina se è alcolico (default a true per ricette più vecchie)
+            const isAlcoholic = recipe.hasOwnProperty('alcoholic') ? recipe.alcoholic : true;
+            button.className = `cocktail-button ${isAlcoholic ? 'alcoholic' : 'non-alcoholic'}`;
             button.textContent = recipe.name;
             button.addEventListener('click', () => showRecipeDetail(recipe));
             cocktailButtonsContainer.appendChild(button);
@@ -233,6 +302,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('detailPreparation').textContent = recipe.preparation;
         document.getElementById('detailLedPositions').textContent = recipe.ledPositions.join(', ');
         document.getElementById('detailOrder').textContent = recipe.displayOrder || '—';
+        
+        // Mostra se il cocktail è alcolico o no
+        const isAlcoholic = recipe.hasOwnProperty('alcoholic') ? recipe.alcoholic : true;
+        document.getElementById('detailAlcoholic').textContent = isAlcoholic ? 'Sì' : 'No';
         
         // Controlla e attiva i LED tramite WLED
         controlWLEDLights(recipe.ledPositions);
@@ -379,5 +452,140 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Errore nella gestione WLED:', error);
         }
+    }
+    
+    /**
+     * Esporta tutte le ricette in un file JSON
+     */
+    function exportRecipes() {
+        try {
+            // Recupera tutte le ricette dal localStorage
+            const recipes = JSON.parse(localStorage.getItem('cocktailRecipes') || '[]');
+            
+            if (recipes.length === 0) {
+                alert('Non ci sono ricette da esportare.');
+                return;
+            }
+            
+            // Crea l'oggetto per l'esportazione che include i metadati
+            const exportData = {
+                type: 'cocktail_recipes_export',
+                version: '1.0',
+                createdAt: new Date().toISOString(),
+                data: recipes
+            };
+            
+            // Converti in stringa JSON formattata
+            const jsonString = JSON.stringify(exportData, null, 2);
+            
+            // Crea un oggetto Blob per il download
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            // Crea un elemento <a> per il download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cocktail_recipes_${new Date().toISOString().slice(0, 10)}.json`;
+            
+            // Aggiungi al documento, simula il click e rimuovi
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // Rilascia l'URL creato
+            URL.revokeObjectURL(url);
+            
+            alert('Esportazione completata con successo!');
+        } catch (error) {
+            console.error('Errore durante l\'esportazione:', error);
+            alert('Si è verificato un errore durante l\'esportazione: ' + error.message);
+        }
+    }
+    
+    /**
+     * Importa ricette da un file JSON
+     */
+    function importRecipes() {
+        const fileInput = document.getElementById('importFile');
+        const importOption = document.querySelector('input[name="importOption"]:checked').value;
+        
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('Seleziona un file JSON da importare.');
+            return;
+        }
+        
+        const file = fileInput.files[0];
+        
+        if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+            alert('Il file deve essere in formato JSON.');
+            return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                // Parsa il file JSON
+                const importedData = JSON.parse(e.target.result);
+                
+                // Verifica il formato del file
+                if (!importedData.type || importedData.type !== 'cocktail_recipes_export' || !importedData.data) {
+                    alert('Il formato del file non è valido. Seleziona un file JSON esportato dall\'app.');
+                    return;
+                }
+                
+                // Recupera le ricette esistenti
+                const existingRecipes = JSON.parse(localStorage.getItem('cocktailRecipes') || '[]');
+                
+                let newRecipes;
+                
+                if (importOption === 'replace') {
+                    // Sostituisci completamente le ricette esistenti
+                    newRecipes = importedData.data;
+                } else if (importOption === 'merge') {
+                    // Unisci le ricette, evitando duplicati basati sull'ID
+                    const mergedRecipes = [...existingRecipes];
+                    
+                    importedData.data.forEach(importedRecipe => {
+                        // Controlla se esiste già una ricetta con lo stesso ID
+                        const existingIndex = mergedRecipes.findIndex(r => r.id === importedRecipe.id);
+                        
+                        if (existingIndex !== -1) {
+                            // Sostituisci la ricetta esistente con quella importata
+                            mergedRecipes[existingIndex] = importedRecipe;
+                        } else {
+                            // Aggiungi la nuova ricetta
+                            mergedRecipes.push(importedRecipe);
+                        }
+                    });
+                    
+                    newRecipes = mergedRecipes;
+                }
+                
+                // Salva le nuove ricette nel localStorage
+                localStorage.setItem('cocktailRecipes', JSON.stringify(newRecipes));
+                
+                // Aggiorna la visualizzazione
+                loadCocktails();
+                
+                // Resetta il campo file
+                fileInput.value = '';
+                
+                alert(`Importazione completata! ${importedData.data.length} ricette importate.`);
+                
+                // Torna alla pagina principale
+                showSection(recipesSection);
+                
+            } catch (error) {
+                console.error('Errore durante l\'importazione:', error);
+                alert('Si è verificato un errore durante l\'importazione: ' + error.message);
+            }
+        };
+        
+        reader.onerror = function() {
+            alert('Si è verificato un errore nella lettura del file.');
+        };
+        
+        reader.readAsText(file);
     }
 });
